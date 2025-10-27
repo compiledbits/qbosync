@@ -1,0 +1,15 @@
+{
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+  },
+  "git.branchProtection": [
+    "main"
+  ],
+  "git.branchProtectionPrompt": "alwaysPrompt"
+}

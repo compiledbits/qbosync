@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "davidanson.vscode-markdownlint",
+    "mhutchie.git-graph",
+    "salesforce.salesforcedx-vscode-apex",
+    "salesforce.salesforcedx-vscode-core",
+    "streetsidesoftware.code-spell-checker"
+  ]
+}
