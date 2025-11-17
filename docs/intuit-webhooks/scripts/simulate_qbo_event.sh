@@ -42,11 +42,34 @@ main() {
   local verifier_token=""
   local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
   local request_body=$(jq -c -n --arg t "$timestamp" '
-    { eventNotifications:
-      [ { realmId: "000000000000",
-          dataChangeEvent: { entities: [ { id: "1", operation: "Update", name: "Customer", lastUpdated: $t } ] }
-        } ]
-    }')
+    [
+      {
+        "specversion": "1.0",
+        "id": "00000000-0000-0000-0000-000000000000",
+        "source": "intuit.guid.example.abcdefghijklmnopqrstuvwxyz=",
+        "type": "qbo.account.created.v1",
+        "datacontenttype": "application/json",
+        "time": $t,
+        "intuitentityid": "1234",
+        "intuitaccountid": "0123456789876543",
+        "data": {
+          "example": "value"
+        }
+      },
+      {
+        "specversion": "1.0",
+        "id": "00000000-0000-0000-0000-111111111111",
+        "source": "intuit.guid.example.abcdefghijklmnopqrstuvwxyz=",
+        "type": "qbo.invoice.updated.v1",
+        "datacontenttype": "application/json",
+        "time": $t,
+        "intuitentityid": "4321",
+        "intuitaccountid": "0123456789876543",
+        "data": {
+          "example": "value"
+        }
+      }
+    ]')
 
   while getopts ":w:v:" opt; do
     case ${opt} in
@@ -92,19 +115,26 @@ main() {
   printf 'signature: %s\n' "$(mask_secret "$signature")"
   printf '%s' "$request_body" | jq .
 
+  # ============================= request headers =============================
   # note: online docs say this should be 'intuit_tid' but while testing i was seeing 'intuit-t-id'
   local intuit_trace_id='intuit-t-id: 99999999-8888-7777-6666-555555555555'
   local intuit_created_time_header="intuit-created-time: $timestamp"
-  local intuit_notification_schema_version_header='intuit-notification-schema-version: 1.0'
-  local content_type_header='Content-Type: application/json'
+  # the 'intuit-notification-schema-version' header changed from 1.0 > 2.0 on 2025-11-12 when they updated their webhooks infrastructure to the CloudEvents format
+  # https://blogs.intuit.com/2025/11/12/upcoming-change-to-webhooks-payload-structure
+  local intuit_notification_schema_version_header='intuit-notification-schema-version: 2.0'
+  local content_type_header='Content-Type: application/cloudevents-batch+json; charset=utf-8'
+  local intuit_signature_algorithm='intuit-signature-algorithm: HMAC-SHA256'
+  local intuit_signature="intuit-signature: $signature"
+  # ===========================================================================
 
-  # POST to the webhook URL with the 'intuit-signature' header
+  # POST to the webhook URL
   http_code=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "intuit-signature: $signature" \
     -H "$intuit_trace_id" \
     -H "$intuit_created_time_header" \
     -H "$intuit_notification_schema_version_header" \
     -H "$content_type_header" \
+    -H "$intuit_signature_algorithm" \
+    -H "$intuit_signature" \
     -d "$request_body" \
     "$webhook_url")
 
